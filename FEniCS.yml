@@ -1,0 +1,6 @@
+name: FEniCS
+channels:
+  - defaults
+dependencies:
+  - fenics-dolfinx=0.7.2
+prefix: /home/mathieu/anaconda3/envs/FEniCS
