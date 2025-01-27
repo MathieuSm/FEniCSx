@@ -1,4 +1,3 @@
-# FEniCSx
 # FEniCSx Examples Repository
 
 This repository provides various examples of finite element analyses using **FEniCSx**, the new version of the FEniCS finite element library. The repository covers different simulation scenarios and utility functions to support preprocessing, simulation, and post-processing tasks.
@@ -61,6 +60,7 @@ Refer to individual script documentation for further details.
 
 ## Future Work
 
+- Write proper docstrings for each script
 - Complete implementation of hyperelastic and plastic models.
 - Expand the tensile experiment pipeline for nonlinear material properties.
 - Implement anisotropic material behavior simulations.
