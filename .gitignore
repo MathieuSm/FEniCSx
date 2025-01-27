@@ -2,3 +2,6 @@
 *.ISQ
 *.raw
 *.mhd
+
+# Ignore cache files
+*.pyc
