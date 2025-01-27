@@ -1,0 +1,4 @@
+# Ignore 3D large files
+*.ISQ
+*.raw
+*.mhd
