@@ -1,12 +1,12 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Class to mesh 2D or 3D objects from numpy arrays
+This module contains classes and functions for generating 2D and 3D meshes from numpy arrays using gmsh.
+It includes mapping functions for 2D and 3D arrays, a Time class for tracking processing time, and a Mesh class for mesh generation.
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '26-01-2024'
-__date__ = '26-01-2024'
 __license__ = 'MIT'
 __version__ = '1.0'
 
@@ -22,8 +22,18 @@ import SimpleITK as sitk
 
 #%% Mapping functions
 @njit
-def Mapping2D(Array:np.array):
+def Mapping2D(Array: np.array):
+    
+    """
+    Maps a 2D numpy array to nodes and elements.
 
+    Parameters:
+    Array (np.array): 2D numpy array to be mapped.
+
+    Returns:
+    tuple: Nodes, Coords, Elements, ElementsNodes.
+    """
+    
     X, Y = Array.T.shape
 
     # Generate nodes map
@@ -52,8 +62,18 @@ def Mapping2D(Array:np.array):
     return Nodes, Coords, Elements, ElementsNodes
 
 @njit
-def Mapping3D(Array:np.array):
+def Mapping3D(Array: np.array):
+    
+    """
+    Maps a 3D numpy array to nodes and elements.
 
+    Parameters:
+    Array (np.array): 3D numpy array to be mapped.
+
+    Returns:
+    tuple: Nodes, Coords, Elements, ElementsNodes.
+    """
+    
     X, Y, Z = Array.T.shape
 
     # Generate nodes map
@@ -89,7 +109,11 @@ def Mapping3D(Array:np.array):
 
 #%% Time class
 class Time():
-
+    
+    """
+    Class to measure and display the processing time.
+    """
+    
     def __init__(self):
         self.Width = 15
         self.Length = 16
@@ -98,19 +122,28 @@ class Time():
     
     def Set(self, Tic=None):
         
+        """
+        Set the start time.
+
+        Parameters:
+        Tic (float): Start time. Defaults to current time.
+        """
+        
         if Tic == None:
             self.Tic = time.time()
         else:
             self.Tic = Tic
 
     def Print(self, Tic=None,  Toc=None):
-
+        
         """
-        Print elapsed time in seconds to time in HH:MM:SS format
-        :param Tic: Actual time at the beginning of the process
-        :param Toc: Actual time at the end of the process
-        """
+        Print elapsed time in HH:MM:SS format.
 
+        Parameters:
+        Tic (float): Start time. Defaults to self.Tic.
+        Toc (float): End time. Defaults to current time.
+        """
+        
         if Tic == None:
             Tic = self.Tic
             
@@ -129,6 +162,14 @@ class Time():
         return
 
     def Update(self, Progress, Text=''):
+
+        """
+        Update the progress bar.
+
+        Parameters:
+        Progress (float): Progress fraction (0 to 1).
+        Text (str): Text to display. Defaults to self.Text.
+        """
 
         Percent = int(round(Progress * 100))
         Np = self.Width * Percent // 100
@@ -150,6 +191,14 @@ class Time():
 
     def Process(self, StartStop:bool, Text=''):
 
+        """
+        Start or stop the process timer and print progress.
+
+        Parameters:
+        StartStop (bool): True to start, False to stop.
+        Text (str): Text to display. Defaults to self.Text.
+        """
+
         if len(Text) == 0:
             Text = self.Text
         else:
@@ -167,12 +216,30 @@ Time = Time()
 
 #%% Mesh class
 class Mesh():
+    
+    """
+    Class to generate and clean 2D or 3D meshes from numpy arrays.
+    """
 
     def __init__(self):
         pass
 
     def CleanAndSort(self, Array, Nodes, Coords, Elements, ElementsNodes):
 
+        """
+        Clean and sort the mesh by removing unnecessary elements.
+
+        Parameters:
+        Array (np.array): Input array.
+        Nodes (np.array): Nodes array.
+        Coords (np.array): Coordinates array.
+        Elements (np.array): Elements array.
+        ElementsNodes (np.array): Elements nodes array.
+
+        Returns:
+        tuple: Cleaned ElementsNodes, Elements, Coords, Nodes.
+        """
+        
         NodesNeeded = np.unique(ElementsNodes[Array.astype(bool)])
 
         ElementsNodes = ElementsNodes[Array.astype(bool)]
@@ -184,6 +251,14 @@ class Mesh():
 
     def Generate(self, Array:np.array, FName:'Mesh.msh'):
 
+        """
+        Generate a mesh from the given input array.
+
+        Parameters:
+        Array (np.array): Input array.
+        FName (str): Filename for the generated mesh.
+        """
+        
         Dim = len(Array.shape)
         if Dim == 2:
             Time.Process(1,'Generate 2D Mesh')
