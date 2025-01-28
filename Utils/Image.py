@@ -15,6 +15,10 @@ import SimpleITK as sitk
 
 class Image():
 
+    """
+    Class for performing various image manipulations using SimpleITK.
+    """
+
     def __init__(self):
         """
         Initialize the Image class.
