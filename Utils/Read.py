@@ -1,12 +1,11 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Class to read different type of files
+This module contains a class to read different types of files.
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '05-12-2024'
-__date__ = '05-12-2024'
 __license__ = 'MIT'
 __version__ = '1.0'
 
@@ -15,10 +14,29 @@ import numpy as np
 
 class Read():
 
+    """
+    Class to read different types of files.
+    """
+
     def __init__(self):
+
+        """
+        Initialize the Read class.
+        """
+        
         pass
 
     def Fabric(self, FileName):
+
+        """
+        Read fabric data from an output file from medtool.
+
+        Parameters:
+        FileName (str): The name of the file to read.
+
+        Returns:
+        tuple: Eigenvalues, eigenvectors, and BVTV.
+        """
 
         Text = open(FileName,'r').readlines()
         BVTV = float(Text[12].split('=')[1])
@@ -37,63 +55,16 @@ class Read():
     def ISQ(self, File, InfoFile=False, Echo=False, ASCII=False):
 
         """
-        This function read an ISQ file from Scanco and return an ITK image and additional data.
-        
-        Adapted from https://github.com/mdoube/BoneJ/blob/master/src/org/bonej/io/ISQReader.java
-        
-        Little endian byte order (the least significant bit occupies the lowest memory position.
-        00   char    check[16];              // CTDATA-HEADER_V1
-        16   int     data_type;
-        20   int     nr_of_bytes;
-        24   int     nr_of_blocks;
-        28   int     patient_index;          //p.skip(28);
-        32   int     scanner_id;				//p.skip(32);
-        36   int     creation_date[2];		//P.skip(36);
-        44   int     dimx_p;					//p.skip(44);
-        48   int     dimy_p;
-        52   int     dimz_p;
-        56   int     dimx_um;				//p.skip(56);
-        60   int     dimy_um;
-        64   int     dimz_um;
-        68   int     slice_thickness_um;		//p.skip(68);
-        72   int     slice_increment_um;		//p.skip(72);
-        76   int     slice_1_pos_um;
-        80   int     min_data_value;
-        84   int     max_data_value;
-        88   int     mu_scaling;             //p.skip(88);  /* p(x,y,z)/mu_scaling = value [1/cm]
-        92	 int     nr_of_samples;
-        96	 int     nr_of_projections;
-        100  int     scandist_um;
-        104  int     scanner_type;
-        108  int     sampletime_us;
-        112  int     index_measurement;
-        116  int     site;                   //coded value
-        120  int     reference_line_um;
-        124  int     recon_alg;              //coded value
-        128  char    name[40]; 		 		//p.skip(128);
-        168  int     energy;        /* V     //p.skip(168);
-        172  int     intensity;     /* uA    //p.skip(172);
-        ...
-        508 int     data_offset;     /* in 512-byte-blocks  //p.skip(508);
-        * So the first 16 bytes are a string 'CTDATA-HEADER_V1', used to identify
-        * the type of data. The 'int' are all 4-byte integers.
-        *
-        * dimx_p is the dimension in pixels, dimx_um the dimensions in micrometer
-        *
-        * So dimx_p is at byte-offset 40, then dimy_p at 44, dimz_p (=number of
-        * slices) at 48.
-        *
-        * The microCT calculates so called 'x-ray linear attenuation' values. These
-        * (float) values are scaled with 'mu_scaling' (see header, e.g. 4096) to
-        * get to the signed 2-byte integers values that we save in the .isq file.
-        *
-        * e.g. Pixel value 8192 corresponds to lin. att. coeff. of 2.0 [1/cm]
-        * (8192/4096)
-        *
-        * Following to the headers is the data part. It is in 2-byte short integers
-        * (signed) and starts from the top-left pixel of slice 1 to the left, then
-        * the next line follows, until the last pixel of the last sclice in the
-        * lower right.
+        Read an ISQ file from Scanco and return a numpy array and additional data.
+
+        Parameters:
+        File (str): The name of the file to read.
+        InfoFile (bool, optional): Whether to save the header information to a text file. Defaults to False.
+        Echo (bool, optional): Whether to print the process information. Defaults to False.
+        ASCII (bool, optional): Whether the file is in ASCII format. Defaults to False.
+
+        Returns:
+        tuple: Voxel model and additional data.
         """
 
         if Echo:
