@@ -1,13 +1,12 @@
 #%% !/usr/bin/env python3
 
-Description = """
-Init file to initialize the different utility script
+"""
+This module initializes the different utility scripts for the application.
 """
 
 # File info
 __author__ = ['Mathieu Simon']
 __date_created__ = '05-12-2024'
-__date__ = '26-01-2025'
 __license__ = 'MIT'
 __version__ = '1.0'
 
