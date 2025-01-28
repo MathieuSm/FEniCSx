@@ -1,6 +1,6 @@
 #%% !/usr/bin/env python3
 
-Description = """
+"""
 This module contains a class for performing image manipulations using SimpleITK.
 """
 
