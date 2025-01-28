@@ -1,12 +1,11 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Class to perform tensor algebra
+This module contains a class to perform tensor algebra.
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '05-12-2024'
-__date__ = '05-12-2024'
 __license__ = 'MIT'
 __version__ = '1.0'
 
@@ -16,11 +15,31 @@ import pyvista as pv
 
 class Tensor():
 
+    """
+    Class to perform various tensor algebra operations.
+    """
+
     def __init__(self):
+
+        """
+        Initialize the Tensor class.
+        """
+        
         pass
 
  #%% Tensors products
     def Dyadic(self, A, B):
+
+        """
+        Compute the dyadic product of two vectors or matrices.
+
+        Parameters:
+        A (numpy.ndarray): First input vector or matrix.
+        B (numpy.ndarray): Second input vector or matrix.
+
+        Returns:
+        numpy.ndarray: The dyadic product of A and B.
+        """
 
         if A.size == 3:
 
@@ -48,6 +67,17 @@ class Tensor():
 
     def Symmetric(self, A, B):
 
+        """
+        Compute the symmetric product of two matrices.
+
+        Parameters:
+        A (numpy.ndarray): First input matrix.
+        B (numpy.ndarray): Second input matrix.
+
+        Returns:
+        numpy.ndarray: The symmetric product of A and B.
+        """
+
         C = np.zeros((3, 3, 3, 3))
 
         for i in range(3):
@@ -59,6 +89,17 @@ class Tensor():
         return C
 
     def Frobenius(self, A, B):
+
+        """
+        Compute the Frobenius inner product of two matrices.
+
+        Parameters:
+        A (numpy.ndarray): First input matrix.
+        B (numpy.ndarray): Second input matrix.
+
+        Returns:
+        float: The Frobenius inner product of A and B.
+        """
 
         s = 0
 
@@ -92,6 +133,16 @@ class Tensor():
 #%% Tensors manipulations
     def Engineering2MandelNotation(self, A):
 
+        """
+        Convert engineering notation to Mandel notation.
+
+        Parameters:
+        A (numpy.ndarray): Input matrix in engineering notation.
+
+        Returns:
+        numpy.ndarray: Matrix in Mandel notation.
+        """
+
         B = np.zeros((6,6))
         for i in range(6):
             for j in range(6):
@@ -107,6 +158,16 @@ class Tensor():
         return B
 
     def Mandel2EngineeringNotation(self, A):
+
+        """
+        Convert Mandel notation to engineering notation.
+
+        Parameters:
+        A (numpy.ndarray): Input matrix in Mandel notation.
+
+        Returns:
+        numpy.ndarray: Matrix in engineering notation.
+        """
 
         B = np.zeros((6,6))
 
@@ -128,6 +189,17 @@ class Tensor():
         return B
 
     def CheckMinorSymmetry(self, A):
+
+        """
+        Check if a tensor has minor symmetry.
+
+        Parameters:
+        A (numpy.ndarray): Input tensor.
+
+        Returns:
+        bool: True if the tensor has minor symmetry, False otherwise.
+        """
+        
         MinorSymmetry = True
         for i in range(3):
             for j in range(3):
@@ -151,6 +223,16 @@ class Tensor():
         return MinorSymmetry
 
     def IsoMorphism66_3333(self, A):
+
+        """
+        Convert a 6x6 matrix to a 3x3x3x3 tensor.
+
+        Parameters:
+        A (numpy.ndarray): Input 6x6 matrix.
+
+        Returns:
+        numpy.ndarray: 3x3x3x3 tensor.
+        """
 
         # Check symmetry
         Symmetry = True
@@ -357,6 +439,16 @@ class Tensor():
 
     def IsoMorphism3333_66(self, A):
 
+        """
+        Convert a 3x3x3x3 tensor to a 6x6 matrix.
+
+        Parameters:
+        A (numpy.ndarray): Input 3x3x3x3 tensor.
+
+        Returns:
+        numpy.ndarray: 6x6 matrix.
+        """
+
         if self.CheckMinorSymmetry == False:
             print('Tensor does not present minor symmetry')
         else:
@@ -409,6 +501,18 @@ class Tensor():
         
     def TransformTensor(self, A, OriginalBasis, NewBasis):
 
+        """
+        Transform a tensor from the original basis to a new basis.
+    
+        Parameters:
+        A (numpy.ndarray): The tensor to be transformed.
+        OriginalBasis (numpy.ndarray): The original basis.
+        NewBasis (numpy.ndarray): The new basis.
+    
+        Returns:
+        numpy.ndarray: The transformed tensor.
+        """
+        
         # Build change of coordinate matrix
         O = OriginalBasis
         N = NewBasis
@@ -440,6 +544,17 @@ class Tensor():
         return TransformedA
 
     def Transform(self, A, B):
+
+        """
+        Transform a vector or matrix using a tensor.
+    
+        Parameters:
+        A (numpy.ndarray): The tensor.
+        B (numpy.ndarray): The vector or matrix to be transformed.
+    
+        Returns:
+        numpy.ndarray: The transformed vector or matrix.
+        """
 
         if A.size == 9 and B.size == 3:
 
@@ -477,6 +592,17 @@ class Tensor():
 #%% Tensors building
     def Fabric(self, eValues, eVectors):
 
+        """
+        Build the fabric tensor from eigenvalues and eigenvectors.
+    
+        Parameters:
+        eValues (numpy.ndarray): Eigenvalues.
+        eVectors (numpy.ndarray): Eigenvectors.
+    
+        Returns:
+        numpy.ndarray: The fabric tensor.
+        """
+
         M = np.zeros((3,3))
         for m in range(3):
             M += eValues[m] * self.Dyadic(eVectors[m], eVectors[m])
@@ -485,8 +611,17 @@ class Tensor():
 
     def Isotropic(self, E, Nu, Basis=np.eye(3)):
 
-        """Build the full 3x3x3x3 isotropic elasticity tensor."""
-        
+        """
+        Build the isotropic elasticity tensor.
+    
+        Parameters:
+        E (float): Young's modulus.
+        Nu (float): Poisson's ratio.
+        Basis (numpy.ndarray, optional): The basis for the tensor. Defaults to np.eye(3).
+    
+        Returns:
+        numpy.ndarray: The isotropic elasticity tensor.
+        """        
         # Lamé parameters
         Lambda = E * Nu / ((1 + Nu) * (1 - 2 * Nu))
         Mu = E / (2 * (1 + Nu))
@@ -507,8 +642,25 @@ class Tensor():
 
     def Othotropic(self, E1, E2, E3, Mu23, Mu31, Mu12, Nu23, Nu31, Nu12, Basis=np.eye(3)):
         
-        """Build the full 3x3x3x3 transverse isotropic elasticity tensor."""
-
+        """
+        Build the orthotropic elasticity tensor.
+    
+        Parameters:
+        E1 (float): Young's modulus in the first direction.
+        E2 (float): Young's modulus in the second direction.
+        E3 (float): Young's modulus in the third direction.
+        Mu23 (float): Shear modulus in the 23 plane.
+        Mu31 (float): Shear modulus in the 31 plane.
+        Mu12 (float): Shear modulus in the 12 plane.
+        Nu23 (float): Poisson's ratio in the 23 plane.
+        Nu31 (float): Poisson's ratio in the 31 plane.
+        Nu12 (float): Poisson's ratio in the 12 plane.
+        Basis (numpy.ndarray, optional): The basis for the tensor. Defaults to np.eye(3).
+    
+        Returns:
+        numpy.ndarray: The orthotropic elasticity tensor.
+        """
+        
         # Lamé parameters
         Lambda1 = E1 * Nu23 / ((1 + Nu23) * (1 - 2 * Nu23))
         Lambda2 = E2 * Nu31 / ((1 + Nu31) * (1 - 2 * Nu31))
@@ -532,11 +684,34 @@ class Tensor():
 
 #%% Tensors characteristics
     def Norm(self, A):
+
+        """
+        Compute the norm of a tensor.
+    
+        Parameters:
+        A (numpy.ndarray): The input tensor.
+    
+        Returns:
+        float: The norm of the tensor.
+        """
+        
         return np.sqrt(np.sum(A**2))
     
 #%% Tensors plotting
     def Ellipsoid(self, EigenValues, EigenVectors, NPoints=100):
 
+        """
+        Build an ellipsoid from eigenvalues and eigenvectors.
+    
+        Parameters:
+        EigenValues (numpy.ndarray): Eigenvalues.
+        EigenVectors (numpy.ndarray): Eigenvectors.
+        NPoints (int, optional): Number of points. Defaults to 100.
+    
+        Returns:
+        tuple: X, Y, and Z coordinates of the ellipsoid.
+        """
+        
         # New coordinate system
         Q = np.array(EigenVectors)
 
@@ -555,6 +730,17 @@ class Tensor():
         return X, Y, Z
 
     def ProjectEllipsoid(self, A, Normal):
+
+        """
+        Project an ellipsoid onto a plane.
+    
+        Parameters:
+        A (numpy.ndarray): The ellipsoid tensor.
+        Normal (numpy.ndarray): The normal vector of the plane.
+    
+        Returns:
+        tuple: Projected eigenvalues and eigenvectors.
+        """
         
         # Projection onto plane
         P = np.eye(3) - Tensor.Dyadic(self, Normal, Normal)
@@ -572,20 +758,17 @@ class Tensor():
     def PlotFabric(self, eValues:np.array, eVectors:np.array, FileName='', ROI=np.zeros((1,1,1))) -> None:
 
         """
-        Plots a 3D ellipsoid representing a region of interest (ROI) with scaling based on the
+        Plot a 3D ellipsoid representing a region of interest (ROI) with scaling based on the
         eigenvalues and eigenvectors provided. The ellipsoid is overlaid on a binary structure mesh,
         and the plot is generated with the ability to visualize the MIL (Mean Intercept Length) values.
-
+    
         Parameters:
-        -----------
-        ROI (3D array): A 3D binary array representing the region of interest (ROI).
-            
-        eValues (1D array): A 1D array containing the eigenvalues of the fabric.
-            
-        eVectors (3D array) : A 2D array (shape: 3x3) containing the eigenvectors of the fabric.
-            
+        eValues (numpy.ndarray): Eigenvalues.
+        eVectors (numpy.ndarray): Eigenvectors.
+        FileName (str, optional): Name of the file to save the plot. Defaults to ''.
+        ROI (numpy.ndarray, optional): A 3D binary array representing the region of interest. Defaults to np.zeros((1, 1, 1)).
+    
         Returns:
-        --------
         None
         """
 
@@ -641,20 +824,15 @@ class Tensor():
     def PlotTensor(self, Tensor:np.array, FileName='') -> None:
 
         """
-        Plots a 3D ellipsoid representing a region of interest (ROI) with scaling based on the
+        Plot a 3D ellipsoid representing a tensor with scaling based on the
         eigenvalues and eigenvectors provided. The ellipsoid is overlaid on a binary structure mesh,
-        and the plot is generated with the ability to visualize the MIL (Mean Intercept Length) values.
-
+        and the plot is generated with the ability to visualize the Bulk Modulus values.
+    
         Parameters:
-        -----------
-        ROI (3D array): A 3D binary array representing the region of interest (ROI).
-            
-        eValues (1D array): A 1D array containing the eigenvalues of the fabric.
-            
-        eVectors (3D array) : A 2D array (shape: 3x3) containing the eigenvectors of the fabric.
-            
+        Tensor (numpy.ndarray): The tensor to be plotted.
+        FileName (str, optional): Name of the file to save the plot. Defaults to ''.
+    
         Returns:
-        --------
         None
         """
 
