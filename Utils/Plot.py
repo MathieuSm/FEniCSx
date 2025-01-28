@@ -1,12 +1,11 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Class to produce standard plot
+This module contains a class for producing standard plots using matplotlib, numpy, and pandas.
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '05-12-2024'
-__date__ = '05-12-2024'
 __license__ = 'MIT'
 __version__ = '1.0'
 
@@ -18,12 +17,38 @@ from scipy.stats.distributions import t
 
 
 class Plot():
-
+    
+    """
+    Class for producing standard plots.
+    """
+    
     def __init__(self):
+        
+        """
+        Initialize the Plot class.
+        """
+        
         pass
 
     def OLS(self, X, Y, Alpha=0.95, CI_Area=True, XLabel='X Data', YLabel='Y Data', FileName='', Show=True):
+        
+        """
+        Perform Ordinary Least Squares (OLS) regression and plot the results.
 
+        Parameters:
+        X (array-like): The independent variable data.
+        Y (array-like): The dependent variable data.
+        Alpha (float, optional): The confidence level for the confidence intervals. Defaults to 0.95.
+        CI_Area (bool, optional): Whether to display the confidence interval area. Defaults to True.
+        XLabel (str, optional): Label for the X-axis. Defaults to 'X Data'.
+        YLabel (str, optional): Label for the Y-axis. Defaults to 'Y Data'.
+        FileName (str, optional): Name of the file to save the plot. Defaults to ''.
+        Show (bool, optional): Whether to show the plot. Defaults to True.
+
+        Returns:
+        tuple: DataFrame of OLS parameters, R-squared value, and standard error.
+        """
+        
         # Convert to matrices
         X = np.matrix(X).T
         Y = np.matrix(Y).T
