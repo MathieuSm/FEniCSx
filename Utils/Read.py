@@ -1,6 +1,6 @@
 #%% !/usr/bin/env python3
 
-Description = """
+"""
 This module contains a class to read different types of files.
 """
 
