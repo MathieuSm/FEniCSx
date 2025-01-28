@@ -1,6 +1,6 @@
 #%% !/usr/bin/env python3
 
-Description = """
+"""
 This module contains classes and functions for generating 2D and 3D meshes from numpy arrays using gmsh.
 It includes mapping functions for 2D and 3D arrays, a Time class for tracking processing time, and a Mesh class for mesh generation.
 """
