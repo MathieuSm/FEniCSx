@@ -6,7 +6,6 @@ This module contains a class for performing image manipulations using SimpleITK.
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '07-12-2024'
-__date__ = '07-12-2024'
 __license__ = 'MIT'
 __version__ = '1.0'
 
