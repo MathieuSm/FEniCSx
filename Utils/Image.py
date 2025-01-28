@@ -1,7 +1,7 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Class to perform image manipulations
+This module contains a class for performing image manipulations using SimpleITK.
 """
 
 __author__ = ['Mathieu Simon']
@@ -17,14 +17,26 @@ import SimpleITK as sitk
 class Image():
 
     def __init__(self):
+        """
+        Initialize the Image class.
+        """
         pass
 
     def Resample(self, Image, Factor=None, Size=[None], Spacing=[None], Order=1):
 
         """
         Resample a SimpleITK image by either a given factor, a new size, or
-        a new voxel spacing. Order stands for interpolation order e.g.
-        Order = 1: Linear interpolation 
+        a new voxel spacing. Order stands for interpolation order.
+
+        Parameters:
+        Image (SimpleITK.Image): The input image to be resampled.
+        Factor (float, optional): The resampling factor. Defaults to None.
+        Size (list, optional): The new size for the image. Defaults to [None].
+        Spacing (list, optional): The new voxel spacing for the image. Defaults to [None].
+        Order (int, optional): The interpolation order. Defaults to 1 (Linear interpolation).
+
+        Returns:
+        SimpleITK.Image: The resampled image.
         """
 
         Dimension = Image.GetDimension()
