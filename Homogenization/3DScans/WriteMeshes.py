@@ -5,7 +5,6 @@ Script used to write hexahedral elements using gmsh
 """
 __author__ = ['Mathieu Simon']
 __date_created__ = '25-01-2025'
-__date__ = '25-01-2025'
 __license__ = 'GPL'
 __version__ = '1.0'
 

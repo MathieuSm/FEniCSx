@@ -33,19 +33,42 @@ from Utils import Time
 #%% Define functions
 
 def NeoHookean(Nu, Mu, u):
+
+    """
+    Computes uniaxial stress using Neo-Hookean strain energy density function.
+    
+    Parameters:
+    Nu (float): Poisson's ratio.
+    Mu (float): Shear modulus.
+    u (ufl.Expr): The displacement field.
+    
+    Returns:
+    float: The Neo-Hookean uniaxial stress.
+    """
+
     return Mu*u**(-2*Nu)*u**((8/3)*Nu - 10/3)*(u**(4*Nu + 4) - 1)
 
 def BoundaryVertices(Mesh):
+
+    """
+    Identifies and returns the vertices at the boundaries of the mesh.
+    
+    Parameters:
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    
+    Returns:
+    list: A list containing the vertices at the bottom, top, north, south, east, and west boundaries.
+    """
     
     Geometry = Mesh.geometry.x
-    Bottom = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].min()))
-    Top = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].max()))
-    North = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].min()))
-    South = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].max()))
-    East = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].min()))
-    West = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].max()))
+    F_Bottom = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].min()))
+    F_Top = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].max()))
+    F_North = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].min()))
+    F_South = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].max()))
+    F_East = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].min()))
+    F_West = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].max()))
     
-    return [Bottom, Top, North, South, East, West]
+    return [F_Bottom, F_Top, F_North, F_South, F_East, F_West]
 
 def PlotResults(V,uh):
 
@@ -93,7 +116,7 @@ def Main():
     DeltaStretch = round((FinS-IniS)/NumberSteps,3)    # Stretch step (-)
 
     # Generate mesh
-    Mesh, Tags, Classes = io.gmshio.read_from_msh('Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
+    Mesh, CellTags, Classes = io.gmshio.read_from_msh('Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
     Area = 1 * 1
     Height = 1
 
@@ -209,7 +232,7 @@ def Main():
     plt.legend()
     plt.show(Figure)
 
-    PlotResults(V,uh)
+    PlotResults(V,u)
 
     return
 

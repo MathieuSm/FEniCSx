@@ -6,7 +6,6 @@ Script used to perform tensile test simulation using FEniCS
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '01-03-2025'
-__date__ = '12-04-2024'
 __license__ = 'GPL'
 __version__ = '1.0'
 
@@ -28,130 +27,64 @@ from dolfinx.fem.petsc import LinearProblem
 sys.path.append(str(Path(__file__).parents[1]))
 from Utils import Time
 
-#%% Define geometric spaces
+#%% Define functions
+def InitializeGMSH(Verbosity=1):
+
+    """
+    Initializes Gmsh and sets verbosity level.
+    Parameters:
+    Verbosity (int): Integer setting the verbosity level.
+    """
+
+    if gmsh.is_initialized():
+        gmsh.clear()
+    else:
+        gmsh.initialize()
+    gmsh.option.setNumber('General.Verbosity', Verbosity)
+
+def ReadMesh(MeshFile, Dimensions=3):
+
+    """
+    Reads the mesh from the given file and creates a model.
+    
+    Parameters:
+    MeshFile (pathlib.Path): The path to the mesh file.
+    Dimensions (integer): Dimension of the mesh.
+    
+    Returns:
+    tuple: The mesh, tags, and classes from the model.
+    """
+
+    gmsh.merge(str(MeshFile))
+    return io.gmshio.model_to_mesh(gmsh.model, comm=MPI.COMM_WORLD, rank=0, gdim=Dimensions)
 
 def LowerSide(x):
+
+    """
+    Identifies and returns a boolean array indicating the vertices on the lower side of the mesh.
+    
+    Parameters:
+    x (numpy.ndarray): The coordinates of the vertices.
+    
+    Returns:
+    numpy.ndarray: A boolean array where True indicates the vertex is on the lower side.
+    """
+
     return np.isclose(x[2], Geometry[:,2].min())
     
 def UpperSide(x):
+
+    """
+    Identifies and returns a boolean array indicating the vertices on the upper side of the mesh.
+    
+    Parameters:
+    x (numpy.ndarray): The coordinates of the vertices.
+    
+    Returns:
+    numpy.ndarray: A boolean array where True indicates the vertex is on the upper side.
+    """
+
     return np.isclose(x[2], Geometry[:,2].max())
-
-def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
-
-    # Reference nodes and face vertices
-    V_Bottom, V_Top, V_North, V_South, V_East, V_West = Faces
-
-    BCs = []
-    Constrained = []
-    for Vertice in V_West:
-
-        if Vertice in Constrained:
-            pass
-        else:
-            # Compute node position
-            Loc = Geometry[Vertice]
-            NewLoc = np.dot(E_Hom + np.eye(len(Loc)), Loc)
-
-            # Displacement
-            u1 = fem.Constant(Mesh,(NewLoc - Loc))
-
-            # Apply boundary conditions and store
-            DOFs = fem.locate_dofs_topological(V, 0, Vertice)
-            BC = fem.dirichletbc(u1, DOFs, V)
-            BCs.append(BC)
-            Constrained.append(Vertice)
-
-    for Vertice in V_South:
-
-        if Vertice in Constrained:
-            pass
-        else:
-            # Compute node position
-            Loc = Geometry[Vertice]
-            NewLoc = np.dot(E_Hom + np.eye(len(Loc)), Loc)
-
-            # Displacement
-            u1 = fem.Constant(Mesh,(NewLoc - Loc))
-
-            # Apply boundary conditions and store
-            DOFs = fem.locate_dofs_topological(V, 0, Vertice)
-            BC = fem.dirichletbc(u1, DOFs, V)
-            BCs.append(BC)
-            Constrained.append(Vertice)
-
-    for i, Vertice in enumerate(V_Bottom):
-
-        if Vertice in Constrained:
-            pass
-        else:
-            # Compute node position
-            Loc = Geometry[Vertice]
-            NewLoc = np.dot(E_Hom + np.eye(len(Loc)), Loc)
-
-            # Displacement
-            u1 = fem.Constant(Mesh,(NewLoc - Loc))
-
-            # Apply boundary conditions and store
-            DOFs = fem.locate_dofs_topological(V, 0, Vertice)
-            BC = fem.dirichletbc(u1, DOFs, V)
-            BCs.append(BC)
-            Constrained.append(Vertice)
-
-    for i, Vertice in enumerate(V_East):
-
-        if Vertice in Constrained:
-            pass
-        else:
-            # Compute node position
-            Loc = Geometry[Vertice]
-            NewLoc = np.dot(E_Hom + np.eye(len(Loc)), Loc)
-
-            # Displacement
-            u1 = fem.Constant(Mesh,(NewLoc - Loc))
-
-            # Apply boundary conditions and store
-            DOFs = fem.locate_dofs_topological(V, 0, Vertice)
-            BC = fem.dirichletbc(u1, DOFs, V)
-            BCs.append(BC)
-            Constrained.append(Vertice)
-
-    for i, Vertice in enumerate(V_North):
-
-        if Vertice in Constrained:
-            pass
-        else:
-            # Compute node position
-            Loc = Geometry[Vertice]
-            NewLoc = np.dot(E_Hom + np.eye(len(Loc)), Loc)
-
-            # Displacement
-            u1 = fem.Constant(Mesh,(NewLoc - Loc))
-
-            # Apply boundary conditions and store
-            DOFs = fem.locate_dofs_topological(V, 0, Vertice)
-            BC = fem.dirichletbc(u1, DOFs, V)
-            BCs.append(BC)
-            Constrained.append(Vertice)
-
-    for i, Vertice in enumerate(V_Top):
-
-        if Vertice in Constrained:
-            pass
-        else:
-            # Compute node position
-            Loc = Geometry[Vertice]
-            NewLoc = np.dot(E_Hom + np.eye(len(Loc)), Loc)
-
-            # Displacement
-            u1 = fem.Constant(Mesh,(NewLoc - Loc))
-
-            # Apply boundary conditions and store
-            DOFs = fem.locate_dofs_topological(V, 0, Vertice)
-            BC = fem.dirichletbc(u1, DOFs, V)
-            BCs.append(BC)
-            Constrained.append(Vertice)
-
-    return BCs
 
 
 #%% Main
@@ -181,13 +114,8 @@ def Main():
         Time.Process(1,MeshFile.name[:-4])
 
         # Read Mesh and create model
-        if gmsh.is_initialized():
-            gmsh.clear()
-        else:
-            gmsh.initialize()
-        gmsh.option.setNumber('General.Verbosity', 1)
-        gmsh.merge(str(MeshFile))
-        Mesh, Tags, Classes = io.gmshio.model_to_mesh(gmsh.model, comm=MPI.COMM_WORLD, rank=0, gdim=3)
+        InitializeGMSH()
+        Mesh, CellTags, Classes = ReadMesh(MeshFile)
 
         # Record time
         Time.Process(1, MeshFile.name[:-4])
@@ -212,8 +140,30 @@ def Main():
 
         # Variational formulation (Linear elasticity)
         def Epsilon(u):
+
+            """
+            Computes the strain tensor for a given displacement field.
+            
+            Parameters:
+            u (ufl.Expr): The displacement field.
+            
+            Returns:
+            ufl.Expr: The strain tensor.
+            """
+
             return 0.5*(ufl.nabla_grad(u) + ufl.nabla_grad(u).T)
         def Sigma(u):
+
+            """
+            Computes the stress tensor for a given displacement field.
+            
+            Parameters:
+            u (ufl.Expr): The displacement field.
+            
+            Returns:
+            ufl.Expr: The stress tensor.
+            """
+            
             return Lambda * ufl.nabla_div(u) * I + 2 * Mu * Epsilon(u)
         Psi = ufl.inner(Sigma(u), Epsilon(v)) * ufl.dx
 
@@ -235,7 +185,6 @@ def Main():
         Problem = LinearProblem(Psi, Load, BCs, petsc_options={'ksp_type': 'cg', 'pc_type': 'gamg'})
 
         # Solve for all loadcases
-        FileName = OutputPath / MeshFile.name[:-4]
         Data = pd.DataFrame(columns=['Displacement [mm]','Force [N]'])
         Area = 1
         for t in range(NumberSteps+1):
@@ -256,10 +205,14 @@ def Main():
             Stress.interpolate(Expression)
             Stress.name = 'Stress'
 
+            # Evaluate stress at the mid-section
             Zmid = (Geometry[:,2].max() - Geometry[:,2].min()) / 2
             P33 = Stress.eval(PETSc.ScalarType((0,0,Zmid)),0)[8]
+            
+            # Compute force
             Force = P33 * Area
 
+            # Store results
             Data.loc[t,'Displacement [mm]'] = Displacement * Resolution
             Data.loc[t,'Force [N]'] = Force
 

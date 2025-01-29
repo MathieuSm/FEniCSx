@@ -1,11 +1,11 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Script used to write hexahedral elements using gmsh
+This script reads ISQ files, processes the scans by cropping, resampling, filtering noise, and segmenting the images.
+The processed data is then used to generate hexahedral mesh elements.
 """
 __author__ = ['Mathieu Simon']
 __date_created__ = '25-01-2025'
-__date__ = '25-01-2025'
 __license__ = 'GPL'
 __version__ = '1.0'
 

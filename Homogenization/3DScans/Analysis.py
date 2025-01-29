@@ -27,6 +27,22 @@ from scipy.stats.distributions import norm, t
 
 def OLS(X, Y, Alpha=0.95, FName=''):
 
+    """
+    Performs Ordinary Least Squares (OLS) regression, computes confidence intervals for the parameters,
+    and plots the regression results with different components of the stiffness tensor in different colors.
+    
+    Parameters:
+    X (numpy.ndarray): The design matrix.
+    Y (numpy.ndarray): The response vector.
+    Alpha (float, optional): The confidence level for the confidence intervals. Default is 0.95.
+    FName (str, optional): The file name to save the results. Default is an empty string.
+    
+    Returns:
+    pandas.DataFrame: A DataFrame containing the parameter estimates and their confidence intervals.
+    float: The adjusted R-squared value.
+    numpy.ndarray: The norm error (NE) values.
+    """
+
     # Solve linear system
     XTXi = np.linalg.inv(X.T * X)
     B = XTXi * X.T * Y

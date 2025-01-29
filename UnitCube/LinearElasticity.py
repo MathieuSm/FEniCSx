@@ -1,12 +1,13 @@
 #%% #!/usr/bin/env python3
 
 Description = """
-Script used to perform tensile test simulation using FEniCS
+This script sets up and solves a linear elasticity problem on a unit cube mesh using the FEniCSx library.
+It defines the material properties, boundary conditions, and solves for the displacement field under tensile loading.
+The results are then compared to theory and visualized using pyvista.
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '01-03-2025'
-__date__ = '12-04-2024'
 __license__ = 'GPL'
 __version__ = '1.0'
 
@@ -32,16 +33,26 @@ from Utils import Time
 #%% Define geometric spaces
 
 def BoundaryVertices(Mesh):
+
+    """
+    Identifies and returns the vertices at the boundaries of the mesh.
+    
+    Parameters:
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    
+    Returns:
+    list: A list containing the vertices at the bottom, top, north, south, east, and west boundaries.
+    """
     
     Geometry = Mesh.geometry.x
-    Bottom = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].min()))
-    Top = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].max()))
-    North = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].min()))
-    South = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].max()))
-    East = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].min()))
-    West = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].max()))
+    F_Bottom = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].min()))
+    F_Top = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].max()))
+    F_North = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].min()))
+    F_South = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[1], Geometry[:,1].max()))
+    F_East = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].min()))
+    F_West = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].max()))
     
-    return [Bottom, Top, North, South, East, West]
+    return [F_Bottom, F_Top, F_North, F_South, F_East, F_West]
 
 def PlotResults(V,uh):
 
@@ -89,7 +100,7 @@ def Main():
     DeltaStretch = round((FinS-IniS)/NumberSteps,3)    # Stretch step (-)
 
     # Generate mesh
-    Mesh, Tags, Classes = io.gmshio.read_from_msh('Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
+    Mesh, CellTags, Classes = io.gmshio.read_from_msh('Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
     Area = 1 * 1
     Height = 1
 
@@ -113,8 +124,30 @@ def Main():
 
     # Variational formulation (Linear elasticity)
     def Epsilon(u):
+
+        """
+        Computes the strain tensor for a given displacement field.
+        
+        Parameters:
+        u (ufl.Expr): The displacement field.
+        
+        Returns:
+        ufl.Expr: The strain tensor.
+        """
+
         return 0.5*(ufl.nabla_grad(u) + ufl.nabla_grad(u).T)
     def Sigma(u):
+
+        """
+        Computes the stress tensor for a given displacement field.
+        
+        Parameters:
+        u (ufl.Expr): The displacement field.
+        
+        Returns:
+        ufl.Expr: The stress tensor.
+        """
+        
         return Lambda * ufl.nabla_div(u) * I + 2 * Mu * Epsilon(u)
     Psi = ufl.inner(Sigma(u), Epsilon(v)) * ufl.dx
 

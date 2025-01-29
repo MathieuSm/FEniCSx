@@ -2,12 +2,10 @@
 
 Description = """
 Script used to perform cube homogenization using FEniCSx
-doi: 10.1007/s10237-007-0109-7
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '01-03-2023'
-__date__ = '12-04-2024'
 __license__ = 'GPL'
 __version__ = '1.0'
 
@@ -28,9 +26,49 @@ from dolfinx.fem.petsc import LinearProblem
 sys.path.append(str(Path(__file__).parents[2]))
 from Utils import Time
 
-#%% Locate boundary vertices
+#%% Define functions
+
+def InitializeGMSH(Verbosity=1):
+
+    """
+    Initializes Gmsh and sets verbosity level.
+    Parameters:
+    Verbosity (int): Integer setting the verbosity level.
+    """
+
+    if gmsh.is_initialized():
+        gmsh.clear()
+    else:
+        gmsh.initialize()
+    gmsh.option.setNumber('General.Verbosity', Verbosity)
+
+def ReadMesh(MeshFile, Dimensions=3):
+
+    """
+    Reads the mesh from the given file and creates a model.
+    
+    Parameters:
+    MeshFile (pathlib.Path): The path to the mesh file.
+    Dimensions (integer): Dimension of the mesh.
+    
+    Returns:
+    tuple: The mesh, tags, and classes from the model.
+    """
+
+    gmsh.merge(str(MeshFile))
+    return io.gmshio.model_to_mesh(gmsh.model, comm=MPI.COMM_WORLD, rank=0, gdim=Dimensions)
 
 def BoundaryVertices(Mesh):
+
+    """
+    Identifies and returns the vertices at the boundaries of the mesh.
+    
+    Parameters:
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    
+    Returns:
+    list: A list containing the vertices at the bottom, top, north, south, east, and west boundaries.
+    """
     
     Geometry = Mesh.geometry.x
     F_Bottom = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[2], Geometry[:,2].min()))
@@ -42,9 +80,28 @@ def BoundaryVertices(Mesh):
     
     return [F_Bottom, F_Top, F_North, F_South, F_East, F_West]
 
-#%% Kinematic Uniform Boundary Conditions
-
 def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
+
+    """
+    Applies kinematic uniform boundary conditions (KUBCs) to the mesh.
+    
+    Parameters:
+    E_Hom (numpy.ndarray): The homogenized strain tensor.
+    Vertices (list): List of vertices at the boundaries.
+    Geometry (numpy.ndarray): The geometry of the mesh.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    
+    Reference:
+    Pahr, D.H., Zysset, P.K.
+    Influence of boundary conditions on computed apparent elastic properties of cancellous bone.
+    Biomech Model Mechanobiol 7, 463–476 (2008).
+    https://doi.org/10.1007/s10237-007-0109-7
+    """
+
 
     # Reference nodes and face vertices
     V_Bottom, V_Top, V_North, V_South, V_East, V_West = Faces
@@ -87,7 +144,7 @@ def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
             BCs.append(BC)
             Constrained.append(Vertice)
 
-    for i, Vertice in enumerate(V_Bottom):
+    for Vertice in V_Bottom:
 
         if Vertice in Constrained:
             pass
@@ -105,7 +162,7 @@ def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
             BCs.append(BC)
             Constrained.append(Vertice)
 
-    for i, Vertice in enumerate(V_East):
+    for Vertice in V_East:
 
         if Vertice in Constrained:
             pass
@@ -123,7 +180,7 @@ def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
             BCs.append(BC)
             Constrained.append(Vertice)
 
-    for i, Vertice in enumerate(V_North):
+    for Vertice in V_North:
 
         if Vertice in Constrained:
             pass
@@ -141,7 +198,7 @@ def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
             BCs.append(BC)
             Constrained.append(Vertice)
 
-    for i, Vertice in enumerate(V_Top):
+    for Vertice in V_Top:
 
         if Vertice in Constrained:
             pass
@@ -164,6 +221,20 @@ def KUBCs(E_Hom, Faces, Geometry, Mesh, V):
 #%% Periodicity-Mixed Uniform Boundary Conditions
 
 def Tensile1BC(Value, L1, Faces, Mesh, V):
+
+    """
+    Applies tensile boundary conditions in the first direction.
+    
+    Parameters:
+    Value (float): The value of the tensile strain.
+    L1 (float): The length in the first direction.
+    Faces (list): List of faces at the boundaries.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    """
 
     # Displacements
     u0 = fem.Constant(Mesh,(0.0))
@@ -191,6 +262,20 @@ def Tensile1BC(Value, L1, Faces, Mesh, V):
 
 def Tensile2BC(Value, L2, Faces, Mesh, V):
 
+    """
+    Applies tensile boundary conditions in the second direction.
+    
+    Parameters:
+    Value (float): The value of the tensile strain.
+    L2 (float): The length in the second direction.
+    Faces (list): List of faces at the boundaries.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    """
+
     # Displacements
     u0 = fem.Constant(Mesh,(0.0))
     u1 = fem.Constant(Mesh,(Value*L2/2))
@@ -217,6 +302,20 @@ def Tensile2BC(Value, L2, Faces, Mesh, V):
 
 def Tensile3BC(Value, L3, Faces, Mesh, V):
 
+    """
+    Applies tensile boundary conditions in the third direction.
+    
+    Parameters:
+    Value (float): The value of the tensile strain.
+    L3 (float): The length in the third direction.
+    Faces (list): List of faces at the boundaries.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    """
+
     # Displacements
     u0 = fem.Constant(Mesh,(0.0))
     u1 = fem.Constant(Mesh,(Value*L3/2))
@@ -242,6 +341,21 @@ def Tensile3BC(Value, L3, Faces, Mesh, V):
     return BC_Top, BC_Bottom, BC_North, BC_South, BC_East, BC_West
 
 def Shear12BC(Value, L1, L2, Faces, Mesh, V):
+
+    """
+    Applies shear boundary conditions in the 1-2 plane.
+    
+    Parameters:
+    Value (float): The value of the shear strain.
+    L1 (float): The length in the first direction.
+    L2 (float): The length in the second direction.
+    Faces (list): List of faces at the boundaries.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    """
 
     # Displacements
     u0 = fem.Constant(Mesh,(0.0))
@@ -271,6 +385,21 @@ def Shear12BC(Value, L1, L2, Faces, Mesh, V):
 
 def Shear13BC(Value, L1, L3, Faces, Mesh, V):
 
+    """
+    Applies shear boundary conditions in the 1-3 plane.
+    
+    Parameters:
+    Value (float): The value of the shear strain.
+    L1 (float): The length in the first direction.
+    L3 (float): The length in the third direction.
+    Faces (list): List of faces at the boundaries.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    """
+
     # Displacements
     u0 = fem.Constant(Mesh,(0.0))
     u23 = fem.Constant(Mesh,(Value*L1/2))
@@ -299,6 +428,21 @@ def Shear13BC(Value, L1, L3, Faces, Mesh, V):
 
 def Shear23BC(Value, L2, L3, Faces, Mesh, V):
 
+    """
+    Applies shear boundary conditions in the 2-3 plane.
+    
+    Parameters:
+    Value (float): The value of the shear strain.
+    L2 (float): The length in the second direction.
+    L3 (float): The length in the third direction.
+    Faces (list): List of faces at the boundaries.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+    """
+
     # Displacements
     u0 = fem.Constant(Mesh,(0.0))
     u12 = fem.Constant(Mesh,(Value*L3/2))
@@ -326,6 +470,28 @@ def Shear23BC(Value, L2, L3, Faces, Mesh, V):
     return BC_Top, BC_Bottom, BC_North, BC_South, BC_East, BC_West
 
 def PMUBC(E_Hom, Faces, L1, L2, L3, Mesh, V):
+
+    """
+    Applies periodicity-mixed uniform boundary conditions (PMUBC).
+    
+    Parameters:
+    E_Hom (numpy.ndarray): The homogenized strain tensor.
+    Faces (list): List of faces at the boundaries.
+    L1 (float): The length in the first direction.
+    L2 (float): The length in the second direction.
+    L3 (float): The length in the third direction.
+    Mesh (dolfinx.mesh.Mesh): The mesh object.
+    V (dolfinx.fem.FunctionSpace): The function space.
+    
+    Returns:
+    list: A list of Dirichlet boundary conditions.
+
+    Reference:
+    Pahr, D.H., Zysset, P.K.
+    Influence of boundary conditions on computed apparent elastic properties of cancellous bone.
+    Biomech Model Mechanobiol 7, 463–476 (2008).
+    https://doi.org/10.1007/s10237-007-0109-7
+    """
 
     if E_Hom[0,0] != 0:
         BCs = Tensile1BC(E_Hom[0,0], L1, Faces, Mesh, V)
@@ -407,13 +573,8 @@ def Main(BCsType='KUBC'):
         Time.Process(1,MeshFile.name[:-4])
 
         # Read Mesh and create model
-        if gmsh.is_initialized():
-            gmsh.clear()
-        else:
-            gmsh.initialize()
-        gmsh.option.setNumber('General.Verbosity', 1)
-        gmsh.merge(str(MeshFile))
-        Mesh, Tags, Classes = io.gmshio.model_to_mesh(gmsh.model, comm=MPI.COMM_WORLD, rank=0, gdim=3)
+        InitializeGMSH()
+        Mesh, CellTags, Classes = ReadMesh(MeshFile)
 
         # Record time
         Time.Process(1, MeshFile.name[:-4])
@@ -423,18 +584,12 @@ def Main(BCsType='KUBC'):
         Nu     = PETSc.ScalarType(0.3)        # Poisson's ratio (-)
         Mu     = fem.Constant(Mesh, E/(2*(1 + Nu)))               # Shear modulus (kPa)
         Lambda = fem.Constant(Mesh, E*Nu/((1 + Nu)*(1 - 2*Nu)))   # First Lamé parameter (kPa)
-        
-        # Stiffness matrix initialization
-        S = np.zeros((6,6))
 
-        # External surfaces
+        # Compute volume
         Geometry = Mesh.geometry.x
         L1 = max(Geometry[:,0]) - min(Geometry[:,0])
         L2 = max(Geometry[:,1]) - min(Geometry[:,1])
         L3 = max(Geometry[:,2]) - min(Geometry[:,2])
-        S1 = L2 * L3
-        S2 = L1 * L3
-        S3 = L1 * L2
         Volume = L1 * L2 * L3
 
         # Functions space over the mesh domain
@@ -451,8 +606,30 @@ def Main(BCsType='KUBC'):
 
         # Variational formulation (Linear elasticity)
         def Epsilon(u):
+
+            """
+            Computes the strain tensor for a given displacement field.
+            
+            Parameters:
+            u (ufl.Expr): The displacement field.
+            
+            Returns:
+            ufl.Expr: The strain tensor.
+            """
+
             return 0.5*(ufl.nabla_grad(u) + ufl.nabla_grad(u).T)
         def Sigma(u):
+
+            """
+            Computes the stress tensor for a given displacement field.
+            
+            Parameters:
+            u (ufl.Expr): The displacement field.
+            
+            Returns:
+            ufl.Expr: The stress tensor.
+            """
+            
             return Lambda * ufl.nabla_div(u) * I + 2 * Mu * Epsilon(u)
         Psi = ufl.inner(Sigma(u), Epsilon(v)) * ufl.dx
 
@@ -481,6 +658,7 @@ def Main(BCsType='KUBC'):
 
         # Solve for all loadcases
         FileName = OutputPath / MeshFile.name[:-4]
+        S = np.zeros((6,6)) # Stiffness matrix
         for LoadCase in range(6):
 
             Time.Update(LoadCase/6, LCs[LoadCase])

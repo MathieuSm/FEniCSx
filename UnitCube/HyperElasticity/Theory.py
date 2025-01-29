@@ -2,7 +2,7 @@
 
 Description = """
 Script used to perform theorical computation
-of hyperelastic strain and stress
+of hyperelastic strain and stress for uniaxial tensile test
 """
 
 __author__ = ['Mathieu Simon']
