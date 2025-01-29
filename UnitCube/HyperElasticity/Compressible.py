@@ -7,7 +7,7 @@ and solves the resulting nonlinear system of equations and compare with theorica
 """
 
 __author__ = ['Mathieu Simon']
-__date_created__ = '01-03-2025'
+__date_created__ = '27-01-2025'
 __license__ = 'GPL'
 __version__ = '1.0'
 
