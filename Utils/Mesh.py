@@ -20,6 +20,9 @@ from numba import njit
 from pathlib import Path
 import SimpleITK as sitk
 
+sys.path.append(str(Path(__file__).parent))
+from Utils import Time
+
 #%% Mapping functions
 @njit
 def Mapping2D(Array: np.array):
@@ -106,113 +109,6 @@ def Mapping3D(Array: np.array):
                     ElementsNodes[Zn, Yn, Xn, 7] = Nodes[Zn+1, Yn+1, Xn]
 
     return Nodes, Coords, Elements, ElementsNodes
-
-#%% Time class
-class Time():
-    
-    """
-    Class to measure and display the processing time.
-    """
-    
-    def __init__(self):
-        self.Width = 15
-        self.Length = 16
-        self.Text = 'Process'
-        self.Tic = time.time()
-    
-    def Set(self, Tic=None):
-        
-        """
-        Set the start time.
-
-        Parameters:
-        Tic (float): Start time. Defaults to current time.
-        """
-        
-        if Tic == None:
-            self.Tic = time.time()
-        else:
-            self.Tic = Tic
-
-    def Print(self, Tic=None,  Toc=None):
-        
-        """
-        Print elapsed time in HH:MM:SS format.
-
-        Parameters:
-        Tic (float): Start time. Defaults to self.Tic.
-        Toc (float): End time. Defaults to current time.
-        """
-        
-        if Tic == None:
-            Tic = self.Tic
-            
-        if Toc == None:
-            Toc = time.time()
-
-
-        Delta = Toc - Tic
-
-        Hours = np.floor(Delta / 60 / 60)
-        Minutes = np.floor(Delta / 60) - 60 * Hours
-        Seconds = Delta - 60 * Minutes - 60 * 60 * Hours
-
-        print('\nProcess executed in %02i:%02i:%02i (HH:MM:SS)' % (Hours, Minutes, Seconds))
-
-        return
-
-    def Update(self, Progress, Text=''):
-
-        """
-        Update the progress bar.
-
-        Parameters:
-        Progress (float): Progress fraction (0 to 1).
-        Text (str): Text to display. Defaults to self.Text.
-        """
-
-        Percent = int(round(Progress * 100))
-        Np = self.Width * Percent // 100
-        Nb = self.Width - Np
-
-        if len(Text) == 0:
-            Text = self.Text
-        else:
-            self.Text = Text
-
-        Ns = self.Length - len(Text)
-        if Ns >= 0:
-            Text += Ns*' '
-        else:
-            Text = Text[:self.Length]
-        
-        Line = '\r' + Text + ' [' + Np*'=' + Nb*' ' + ']' + f' {Percent:.0f}%'
-        print(Line, sep='', end='', flush=True)
-
-    def Process(self, StartStop:bool, Text=''):
-
-        """
-        Start or stop the process timer and print progress.
-
-        Parameters:
-        StartStop (bool): True to start, False to stop.
-        Text (str): Text to display. Defaults to self.Text.
-        """
-
-        if len(Text) == 0:
-            Text = self.Text
-        else:
-            self.Text = Text
-
-        if StartStop*1 == 1:
-            self.Tic = time.time()
-            self.Update(0, Text)
-
-        elif StartStop*1 == 0:
-            self.Update(1, Text)
-            self.Print()
-
-Time = Time()
 
 #%% Mesh class
 class Mesh():
