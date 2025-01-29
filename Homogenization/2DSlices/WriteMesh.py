@@ -1,11 +1,10 @@
 #%% !/usr/bin/env python3
 
 Description = """
-Script used to write hexahedral elements using gmsh
+Script used to write 2D square elements using gmsh
 """
 __author__ = ['Mathieu Simon']
 __date_created__ = '26-01-2025'
-__date__ = '26-01-2025'
 __license__ = 'GPL'
 __version__ = '1.0'
 
