@@ -48,25 +48,6 @@ def NeoHookean(Nu, Mu, Lambda1):
 
     return Mu*Lambda1**(-2*Nu)*(Lambda1**(4*Nu + 4) - 1)/Lambda1**2
 
-def NeoHookean(C1, J, Lambda1):
-
-    """
-    Computes uniaxial stress using Neo-Hookean strain energy density function.
-    
-    Parameters:
-    Nu (float): Poisson's ratio.
-    Mu (float): Shear modulus.
-    Lambda1 (float): The elongation ratio.
-    
-    Returns:
-    float: The Neo-Hookean uniaxial stress.
-
-    Reference:
-    https://en.wikipedia.org/wiki/Neo-Hookean_solid
-    """
-
-    return 2*C1/J**(5/3) * (Lambda1**2 - J/Lambda1)
-
 def BoundaryVertices(Mesh):
 
     """
@@ -129,32 +110,22 @@ def PlotResults(V,uh):
 def Main():
 
     # Test definition
-    IniS = 0.5                                           # Initial state (-)
-    FinS = 2.5                                         # Final state/stretch (-)
-    NumberSteps = 20                                   # Number of steps (-)
+    IniS = 0.1                                           # Initial state (-)
+    FinS = 5.0                                         # Final state/stretch (-)
+    NumberSteps = 50                                   # Number of steps (-)
     DeltaStretch = round((FinS-IniS)/NumberSteps,3)    # Stretch step (-)
     Streches = np.round(np.arange(IniS,FinS+DeltaStretch,DeltaStretch),1)
 
     # Generate mesh
     Mesh, CellTags, Classes = io.gmshio.read_from_msh('../Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
-    Geometry = Mesh.geometry.x
-    Height = Geometry[:,2].max() - Geometry[:,2].min()
-
-    # Mark top face
-    TopFace = mesh.locate_entities_boundary(Mesh, 2, lambda x: np.isclose(x[2], Geometry[:,2].max()))
-    TopTag = mesh.meshtags(Mesh, 2, TopFace, 1)
-
-    # Define a measure restricted to the top surface
-    ds = ufl.Measure("ds", domain=Mesh, subdomain_data=TopTag)
-
-    # Integrate over the top surface (tagged as 1)
-    TopArea = fem.assemble_scalar(fem.form(1 * ds(1)))
+    Height = Mesh.geometry.x[:,2].max() - Mesh.geometry.x[:,2].min()
 
     # Define Material Constants
-    E      = PETSc.ScalarType(1e4)        # Young's modulus (Pa)
-    Nu     = PETSc.ScalarType(0.3)        # Poisson's ratio (-)
-    Mu     = fem.Constant(Mesh, E/(2*(1 + Nu)))               # Shear modulus (kPa)
-    Lambda = fem.Constant(Mesh, E*Nu/((1 + Nu)*(1 - 2*Nu)))   # First Lamé parameter (kPa)
+    Lambda = 1e6                        # First Lamé parameter (Pa)
+    Mu = 660                            # Shear modulus (Pa)
+    E = Mu*(3*Lambda+2*Mu)/(Lambda+Mu)  # Young's modulus (Pa)
+    Nu = Lambda / (2*(Lambda+Mu))       # Poisson's ratio (-)
+    # Note that Poisson's ratio nu is very close to 0.5
 
     # Functions space over the mesh domain
     ElementType = 'Lagrange'
@@ -254,28 +225,18 @@ def Main():
         # Evaluate stress at the center of the cube
         P33 = Stress.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)[8]
 
-        # Compute volume change
-        Je = ufl.FiniteElement(ElementType, Mesh.ufl_cell(), 1)
-        Jf = fem.FunctionSpace(Mesh, Je)
-        Expression = fem.Expression(J, Jf.element.interpolation_points())
-        Vc = fem.Function(Jf)
-        Vc.interpolate(Expression)
-        Vc.name = 'Volume Change'
-        Js[t] = Vc.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)[0]
-
         Data.loc[t,'Strain'] = Strain
         Data.loc[t,'Stress'] = P33
 
-    # ModelStress = NeoHookean(Nu, E/(2*(1 + Nu)), Streches)
-    ModelStress = NeoHookean(E/(2*(1 + Nu))/2, Js, Streches)
+    ModelStress = NeoHookean(Nu, Lambda, Streches)
     Theory = ModelStress
 
     # Plot results
     Figure, Axis = plt.subplots(1,1)
-    Axis.plot(Data['Strain'], Theory, color=(1,0,0), label='Theory')
+    Axis.plot(Data['Strain'], Theory, color=(1,0,0), linestyle='none', marker='o', fillstyle='none', label='Theory')
     Axis.plot(Data['Strain'], Data['Stress'], color=(0,0,1), label='Simulation')
-    Axis.set_xlabel('Strain')
-    Axis.set_ylabel('Force')
+    Axis.set_xlabel('Strain (-)')
+    Axis.set_ylabel('Stress (Pa)')
     plt.legend()
     plt.show(Figure)
 
