@@ -1,12 +1,13 @@
 #%% #!/usr/bin/env python3
 
 Description = """
-Script used to perform tensile test simulation using FEniCS
+This script performs a tensile test simulation using the FEniCSx library. 
+It sets up a finite element model of a hyperelastic material, applies boundary conditions, 
+and solves the resulting nonlinear system of equations and compare with theorical solution.
 """
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '01-03-2025'
-__date__ = '12-04-2024'
 __license__ = 'GPL'
 __version__ = '1.0'
 
