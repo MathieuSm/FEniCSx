@@ -28,7 +28,68 @@ from dolfinx.fem.petsc import LinearProblem
 sys.path.append(str(Path(__file__).parents[2]))
 from Utils import Time
 
-#%% Define geometric spaces - Faces
+#%% Define functions
+
+def InitializzeGMSH(Verbosity=1):
+
+    """
+    Initializes Gmsh and sets verbosity level.
+    Parameters:
+    Verbosity (int): Integer setting the verbosity level.
+    """
+
+    if gmsh.is_initialized():
+        gmsh.clear()
+    else:
+        gmsh.initialize()
+    gmsh.option.setNumber('General.Verbosity', Verbosity)
+
+def ReadMesh(MeshFile):
+
+    """
+    Reads the mesh from the given file and creates a model.
+    
+    Parameters:
+    MeshFile (pathlib.Path): The path to the mesh file.
+    
+    Returns:
+    tuple: The mesh, tags, and classes from the model.
+    """
+
+    gmsh.merge(str(MeshFile))
+    return io.gmshio.model_to_mesh(gmsh.model, comm=MPI.COMM_WORLD, rank=0, gdim=2)
+
+def MaterialConstants(Tag=[], YoungsModulus=[], PoissonRatio=[]):
+    """
+    Defines material constants for the simulation.
+    
+    Returns:
+    list: A list of tuples containing tag, Young's modulus, and Poisson's ratio.
+    """
+    return [(T, PETSc.ScalarType(E), PETSc.ScalarType(Nu))
+    for T, E, Nu in zip(Tag, YoungsModulus, PoissonRatio)]
+
+def compute_lame_parameters(mesh, tags, material_constants):
+    """
+    Computes the Lamé parameters as a function of cell tags.
+    
+    Parameters:
+    mesh (dolfinx.mesh.Mesh): The mesh object.
+    tags (dolfinx.mesh.MeshTags): The mesh tags.
+    material_constants (list): A list of material constants.
+    
+    Returns:
+    tuple: The Lamé parameters lambda and mu.
+    """
+    lambda_ = fem.Function(fem.FunctionSpace(mesh, ('DG', 0)))
+    mu = fem.Function(fem.FunctionSpace(mesh, ('DG', 0)))
+    
+    for tag, E, nu in material_constants:
+        cells = np.where(tags.values == tag)[0]
+        lambda_.x.array[cells] = E * nu / ((1 + nu) * (1 - 2 * nu))
+        mu.x.array[cells] = E / (2 * (1 + nu))
+    
+    return lambda_, mu
 
 def BoundariesVertices(Mesh):
     Geometry = Mesh.geometry.x[:,:-1]
@@ -37,8 +98,6 @@ def BoundariesVertices(Mesh):
     F_East = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].min()))
     F_West = mesh.locate_entities_boundary(Mesh, 0, lambda x: np.isclose(x[0], Geometry[:,0].max()))
     return [F_North, F_South, F_East, F_West]
-
-#%% Kinematic Uniform Boundary Conditions
 
 def KUBCs(E_Hom, Vertices, Geometry, Mesh, V):
 
