@@ -27,12 +27,12 @@ from dolfinx import io, fem, mesh, plot
 from dolfinx.nls.petsc import NewtonSolver
 from dolfinx.fem.petsc import NonlinearProblem
 
-sys.path.append(str(Path(__file__).parents[1]))
+sys.path.append(str(Path(__file__).parents[2]))
 from Utils import Time
 
 #%% Define functions
 
-def NeoHookean(Nu, Mu, u):
+def NeoHookean(Nu, Mu, Lambda1):
 
     """
     Computes uniaxial stress using Neo-Hookean strain energy density function.
@@ -40,13 +40,32 @@ def NeoHookean(Nu, Mu, u):
     Parameters:
     Nu (float): Poisson's ratio.
     Mu (float): Shear modulus.
-    u (ufl.Expr): The displacement field.
+    Lambda1 (float): The elongation ratio.
     
     Returns:
     float: The Neo-Hookean uniaxial stress.
     """
 
-    return Mu*u**(-2*Nu)*u**((8/3)*Nu - 10/3)*(u**(4*Nu + 4) - 1)
+    return Mu*Lambda1**(-2*Nu)*(Lambda1**(4*Nu + 4) - 1)/Lambda1**2
+
+def NeoHookean(C1, J, Lambda1):
+
+    """
+    Computes uniaxial stress using Neo-Hookean strain energy density function.
+    
+    Parameters:
+    Nu (float): Poisson's ratio.
+    Mu (float): Shear modulus.
+    Lambda1 (float): The elongation ratio.
+    
+    Returns:
+    float: The Neo-Hookean uniaxial stress.
+
+    Reference:
+    https://en.wikipedia.org/wiki/Neo-Hookean_solid
+    """
+
+    return 2*C1/J**(5/3) * (Lambda1**2 - J/Lambda1)
 
 def BoundaryVertices(Mesh):
 
@@ -110,13 +129,14 @@ def PlotResults(V,uh):
 def Main():
 
     # Test definition
-    IniS = 1                                           # Initial state (-)
-    FinS = 1.5                                         # Final state/stretch (-)
-    NumberSteps = 10                                   # Number of steps (-)
+    IniS = 0.5                                           # Initial state (-)
+    FinS = 2.5                                         # Final state/stretch (-)
+    NumberSteps = 20                                   # Number of steps (-)
     DeltaStretch = round((FinS-IniS)/NumberSteps,3)    # Stretch step (-)
+    Streches = np.round(np.arange(IniS,FinS+DeltaStretch,DeltaStretch),1)
 
     # Generate mesh
-    Mesh, CellTags, Classes = io.gmshio.read_from_msh('Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
+    Mesh, CellTags, Classes = io.gmshio.read_from_msh('../Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
     Area = 1 * 1
     Height = 1
 
@@ -149,7 +169,7 @@ def Main():
     J = ufl.variable(ufl.det(F))
 
     # Stored strain energy density (compressible neo-Hookean model)
-    Psi = (Mu / 2) * (Ic - 3) - Mu * ufl.ln(J) + (Lambda / 2) * (ufl.ln(J))**2
+    Psi = (Mu / 2) * (Ic - 3) - Mu * ufl.ln(J) + (Lambda / 2) * (J-1)**2
 
     # Hyper-elasticity
     P = ufl.diff(Psi, F)
@@ -195,10 +215,11 @@ def Main():
 
     # Solve for all loadcases
     Data = pd.DataFrame()
-    for t in range(NumberSteps+1):
+    Js = np.zeros(NumberSteps)
+    for t, Strech in enumerate(Streches):
 
         # Update displacement
-        Displacement = t * DeltaStretch * Height
+        Displacement = (Strech-1) * Height
         u1.value = Displacement
 
         # Solve problem
@@ -216,11 +237,21 @@ def Main():
         P33 = Stress.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)[8]
         Force = P33 * Area
 
+        # Compute volume change
+        Je = ufl.FiniteElement(ElementType, Mesh.ufl_cell(), 1)
+        Jf = fem.FunctionSpace(Mesh, Je)
+        Expression = fem.Expression(J, Jf.element.interpolation_points())
+        Vc = fem.Function(Jf)
+        Vc.interpolate(Expression)
+        Vc.name = 'Volume Change'
+        Js[t] = Vc.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)
+
         Data.loc[t,'Displacement'] = Displacement
         Data.loc[t,'Simulation'] = Force
 
     Strain = Data['Displacement'] / Height
-    ModelStress = NeoHookean(Nu, E/(2*(1 + Nu)), Strain+1)
+    # ModelStress = NeoHookean(Nu, E/(2*(1 + Nu)), Strain+1)
+    ModelStress = NeoHookean(E/(2*(1 + Nu))/2, Js, Strain+1)
     Theory = ModelStress / Area
 
     # Plot results

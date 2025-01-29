@@ -7,7 +7,6 @@ of hyperelastic strain and stress for uniaxial tensile test
 
 __author__ = ['Mathieu Simon']
 __date_created__ = '27-01-2025'
-__date__ = '27-01-2025'
 __license__ = 'GPL'
 __version__ = '1.0'
 
@@ -65,7 +64,7 @@ def Main():
     C1, D1 = sp.symbols(r'C_{1} D_{1}', positive=True)
     C1Function  = Mu / 2
     D1Function  = Mu*Nu / (1 - 2*Nu)
-    Psi_NH = C1 * (J**sp.Rational(-2,3)*I1 - 3) + D1 * (J-1)**2
+    Psi_NH = C1 * (I1 - 3 - 2*sp.ln(J)) + D1 * (J-1)**2
 
     Psis = [Psi_NH]
     Psi  = Psis[0]
@@ -134,8 +133,8 @@ def Main():
     # Store function into python file
     Function = inspect.getsource(NH)
     Function = Function.replace('_lambdifygenerated', 'NeoHookean')
-    Function = Function.replace('Dummy_81','Nu')
-    Function = Function.replace('Dummy_82','Mu')
+    Function = Function.replace('Dummy_91','Nu')
+    Function = Function.replace('Dummy_92','Mu')
     with open('Function.py','w') as F:
         F.write(Function)
 
