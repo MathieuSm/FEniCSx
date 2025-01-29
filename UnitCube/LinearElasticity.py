@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 from dolfinx import io, fem, mesh, plot
 from dolfinx.fem.petsc import LinearProblem
 
-sys.path.append(str(Path(__file__).parents[2]))
+sys.path.append(str(Path(__file__).parents[1]))
 from Utils import Time
 
 #%% Define geometric spaces
