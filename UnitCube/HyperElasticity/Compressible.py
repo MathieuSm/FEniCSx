@@ -137,8 +137,18 @@ def Main():
 
     # Generate mesh
     Mesh, CellTags, Classes = io.gmshio.read_from_msh('../Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
-    Area = 1 * 1
-    Height = 1
+    Geometry = Mesh.geometry.x
+    Height = Geometry[:,2].max() - Geometry[:,2].min()
+
+    # Mark top face
+    TopFace = mesh.locate_entities_boundary(Mesh, 2, lambda x: np.isclose(x[2], Geometry[:,2].max()))
+    TopTag = mesh.meshtags(Mesh, 2, TopFace, 1)
+
+    # Define a measure restricted to the top surface
+    ds = ufl.Measure("ds", domain=Mesh, subdomain_data=TopTag)
+
+    # Integrate over the top surface (tagged as 1)
+    TopArea = fem.assemble_scalar(fem.form(1 * ds(1)))
 
     # Define Material Constants
     E      = PETSc.ScalarType(1e4)        # Young's modulus (Pa)
@@ -172,7 +182,9 @@ def Main():
     Psi = (Mu / 2) * (Ic - 3) - Mu * ufl.ln(J) + (Lambda / 2) * (J-1)**2
 
     # Hyper-elasticity
-    P = ufl.diff(Psi, F)
+    P = ufl.diff(Psi, F) # 1st Piola–Kirchhoff stress tensor (nominal stress)
+    S = ufl.inv(F) * ufl.diff(Psi, F) # 2nd Piola–Kirchhoff stress tensor
+    Sigma = 1/ufl.det(F) * ufl.diff(Psi, F) * F.T # Cauchy stress (True of material stress)
 
     # External forces
     T = fem.Constant(Mesh, PETSc.ScalarType((0, 0, 0)))
@@ -209,17 +221,23 @@ def Main():
         DOFs = fem.locate_dofs_topological(V.sub(2), 0, Vertex)
         BCs.append(fem.dirichletbc(u1, DOFs, V.sub(2)))
 
+    # Normal to top surface
+    n = fem.Constant(Mesh, PETSc.ScalarType((0,0,1)))
+
+    # Deformation direction
+    Dir = fem.Constant(Mesh, PETSc.ScalarType((0,0,1)))
+
     # Model problem
     Problem = NonlinearProblem(Fpi, u, BCs)
     Solver = NewtonSolver(Mesh.comm, Problem)
 
     # Solve for all loadcases
     Data = pd.DataFrame()
-    Js = np.zeros(NumberSteps)
-    for t, Strech in enumerate(Streches):
+    Js = np.zeros(NumberSteps+1)
+    for t, Strain in enumerate(Streches):
 
         # Update displacement
-        Displacement = (Strech-1) * Height
+        Displacement = (Strain-1) * Height
         u1.value = Displacement
 
         # Solve problem
@@ -228,14 +246,13 @@ def Main():
         # Compute stress
         Te = ufl.TensorElement(ElementType, Mesh.ufl_cell(), 1)
         T = fem.FunctionSpace(Mesh, Te)
-        Expression = fem.Expression(P, T.element.interpolation_points())
+        Expression = fem.Expression(Sigma, T.element.interpolation_points())
         Stress = fem.Function(T)
         Stress.interpolate(Expression)
         Stress.name = 'Stress'
 
         # Evaluate stress at the center of the cube
         P33 = Stress.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)[8]
-        Force = P33 * Area
 
         # Compute volume change
         Je = ufl.FiniteElement(ElementType, Mesh.ufl_cell(), 1)
@@ -244,21 +261,20 @@ def Main():
         Vc = fem.Function(Jf)
         Vc.interpolate(Expression)
         Vc.name = 'Volume Change'
-        Js[t] = Vc.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)
+        Js[t] = Vc.eval(PETSc.ScalarType((0.5,0.5,0.5)),0)[0]
 
-        Data.loc[t,'Displacement'] = Displacement
-        Data.loc[t,'Simulation'] = Force
+        Data.loc[t,'Strain'] = Strain
+        Data.loc[t,'Stress'] = P33
 
-    Strain = Data['Displacement'] / Height
-    # ModelStress = NeoHookean(Nu, E/(2*(1 + Nu)), Strain+1)
-    ModelStress = NeoHookean(E/(2*(1 + Nu))/2, Js, Strain+1)
-    Theory = ModelStress / Area
+    # ModelStress = NeoHookean(Nu, E/(2*(1 + Nu)), Streches)
+    ModelStress = NeoHookean(E/(2*(1 + Nu))/2, Js, Streches)
+    Theory = ModelStress
 
     # Plot results
     Figure, Axis = plt.subplots(1,1)
-    Axis.plot(Data['Displacement'], Theory, color=(1,0,0), label='Theory')
-    Axis.plot(Data['Displacement'], Data['Simulation'], color=(0,0,1), label='Simulation')
-    Axis.set_xlabel('Displacement')
+    Axis.plot(Data['Strain'], Theory, color=(1,0,0), label='Theory')
+    Axis.plot(Data['Strain'], Data['Stress'], color=(0,0,1), label='Simulation')
+    Axis.set_xlabel('Strain')
     Axis.set_ylabel('Force')
     plt.legend()
     plt.show(Figure)
