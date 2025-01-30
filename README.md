@@ -60,8 +60,7 @@ Refer to individual script documentation for further details.
 
 ## Future Work
 
-- Write proper docstrings for each script
-- Complete implementation of hyperelastic and plastic models.
+- Complete implementation of postyield behaviors (plastic, densification).
 - Expand the tensile experiment pipeline for nonlinear material properties.
 - Implement anisotropic material behavior simulations.
 
