@@ -62,7 +62,6 @@ Refer to individual script documentation for further details.
 
 - Complete implementation of postyield behaviors (plastic, densification).
 - Expand the tensile experiment pipeline for nonlinear material properties.
-- Implement anisotropic material behavior simulations.
 
 ## Contributing
 
