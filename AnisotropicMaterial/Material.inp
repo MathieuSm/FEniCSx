@@ -1,0 +1,17 @@
+**********************************************
+**
+**        Material Abaqus input File
+**    Mathieu Simon, ARTORG Center, 2024 
+**
+**********************************************
+*ORIENTATION, NAME=Orient2
+1.0, 0.0, 0.0, 0.0, 1.0, 0.0
+** Material Property Elastic 1
+*SOLID SECTION, ELSET=SET2, MATERIAL=MATSET2, ORIENTATION=Orient2
+1.
+*MATERIAL,NAME=MATSET2
+*ELASTIC, TYPE=ENGINEERING CONSTANTS
+12442.5, 12442.5, 23770.8, 0.34, 0.245987, 0.245987, 4642.74, 6417.14
+6417.14
+**
+**********************************************
