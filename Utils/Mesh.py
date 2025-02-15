@@ -20,9 +20,6 @@ from numba import njit
 from pathlib import Path
 import SimpleITK as sitk
 
-sys.path.append(str(Path(__file__).parent))
-from Utils import Time
-
 #%% Mapping functions
 @njit
 def Mapping2D(Array: np.array):
@@ -157,18 +154,14 @@ class Mesh():
         
         Dim = len(Array.shape)
         if Dim == 2:
-            Time.Process(1,'Generate 2D Mesh')
 
             # Perform mapping
             Nodes, Coords, Elements, ElementsNodes = Mapping2D(Array)
-            Time.Update(1/5,'Nodes Map Done')
 
         elif Dim == 3:
-            Time.Process(1,'Generate 3D Mesh')
 
             # Perform mapping
             Nodes, Coords, Elements, ElementsNodes = Mapping3D(Array)
-            Time.Update(1/5,'Nodes Map Done')
 
         else:
             print('Dimension more implemented (only 2D or 3D array)')
@@ -179,11 +172,9 @@ class Mesh():
         Phase_Elements = []
         for Phase in Phases:
             Phase_Elements.append(Elements[Array == Phase])
-        Time.Update(2/6,'Phases attributed')
 
         # Remove 0 elements
         ElementsNodes, Elements, Coords, Nodes = self.CleanAndSort(Array, Nodes, Coords, Elements, ElementsNodes)
-        Time.Update(3/6,'0 elements removed')
 
         # Generate tags
         NodeTags = np.arange(len(Nodes)) + 1
@@ -193,7 +184,6 @@ class Mesh():
         PhysicalTags = np.ones(len(Elements),int)
         for P, Phase in enumerate(Phases[1:]):
             PhysicalTags[[E in Phase_Elements[P+1] for E in Elements]] = Phase
-        Time.Update(4/6,'Tags attributed')
 
         # Generate mesh
         gmsh.initialize()
@@ -210,7 +200,6 @@ class Mesh():
         else:
             NodesCoords = [C for C in Coords.ravel()]
         gmsh.model.mesh.addNodes(Dim, 1, list(NodeTags), NodesCoords)
-        Time.Update(5/6,'Nodes added')
 
         # Element
         for Phase in Phases:
@@ -221,7 +210,6 @@ class Mesh():
             TagList = [[E] for E in ElementsTags[PhysicalTags==Phase]]
             NodeList = [list(N+1) for N in ElementsNodes[PhysicalTags==Phase]]
             gmsh.model.mesh.addElements(Dim, Phase, ElementType, TagList, NodeList)
-        Time.Update(6/6,'Elements added')
 
         # Physical group
         for Phase in Phases:
@@ -230,8 +218,5 @@ class Mesh():
         # Write mesh
         gmsh.write(FName)
         gmsh.finalize()
-
-        # Print time
-        Time.Process(0,'Mesh written')
 
         return
