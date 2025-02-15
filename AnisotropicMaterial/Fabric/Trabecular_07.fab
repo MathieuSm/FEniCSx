@@ -1,0 +1,22 @@
+
+=====================================================================
+     Medical Image Analysis  by  D.H. Pahr 
+=====================================================================
+ Date - Time   = 2025/1/31 - 2:9
+ Param: -step  =      5
+ Param: -power =      2   (  128 Directions)
+ Param: -ftype =      1   (Ellip..1, 2nd Order..2)
+ Param: -valid =    0.0
+ Filename      = Trabecular_07.mhd
+ nx,ny,nz      = [86, 86, 86]
+ Threshold     = [2]
+ BV/TV         = 0.3565
+
+
+--------------------------------------------------------
+RESULTS: Morphological analysis normalized by : trace
+--------------------------------------------------------
+ MIL - Eigen values   :   1.45340    0.86830    0.67830
+ MIL - Eigen vector 1 :  -0.04270   -0.00869    0.99905
+ MIL - Eigen vector 2 :  -0.58225   -0.81238   -0.03195
+ MIL - Eigen vector 3 :   0.81189   -0.58306    0.02963

@@ -1,0 +1,22 @@
+
+=====================================================================
+     Medical Image Analysis  by  D.H. Pahr 
+=====================================================================
+ Date - Time   = 2025/1/31 - 2:6
+ Param: -step  =      5
+ Param: -power =      2   (  128 Directions)
+ Param: -ftype =      1   (Ellip..1, 2nd Order..2)
+ Param: -valid =    0.0
+ Filename      = Cortical_06.mhd
+ nx,ny,nz      = [77, 77, 77]
+ Threshold     = [2]
+ BV/TV         = 0.8078
+
+
+--------------------------------------------------------
+RESULTS: Morphological analysis normalized by : trace
+--------------------------------------------------------
+ MIL - Eigen values   :   1.25610    0.92610    0.81781
+ MIL - Eigen vector 1 :   0.07731    0.06868    0.99464
+ MIL - Eigen vector 2 :   0.35098   -0.93564    0.03733
+ MIL - Eigen vector 3 :   0.93319    0.34622   -0.09644
