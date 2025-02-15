@@ -5,3 +5,6 @@
 
 # Ignore cache files
 *.pyc
+
+# Ignore heavy meshes
+/AnisotropicMaterial/Meshes/*
