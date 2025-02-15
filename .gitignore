@@ -8,3 +8,4 @@
 
 # Ignore heavy meshes
 /AnisotropicMaterial/Meshes/*
+/AnisotropicMaterial/Abaqus/*.inp
