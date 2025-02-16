@@ -13,16 +13,22 @@ __version__ = '1.0'
 
 #%% Imports
 
+import sys
 import ufl
 import argparse
 import numpy as np
 import pandas as pd
 from mpi4py import MPI
+from pathlib import Path
 from petsc4py import PETSc
 import matplotlib.pyplot as plt
 from dolfinx import mesh, fem, io
 from dolfinx.nls.petsc import NewtonSolver
 from dolfinx.fem.petsc import NonlinearProblem
+
+sys.path.append(str(Path(__file__).parents[1]))
+from Utils import Tensor
+
 
 #%% Define functions
 
@@ -80,16 +86,18 @@ def YieldFunction(S, Sy):
 
 def NewtonBackProjection(TrialStress, Sy, MaxIter=25, Tol=1e-6):
     """
-    Newton-Raphson algorithm to project stress back onto the yield surface.
+    Perform the plastic correction using Newton-Raphson return mapping.
 
     Parameters:
-    S_trial : ufl.Expr - Trial stress tensor
-    sigma_y : float - Yield stress limit
-    max_iters : int - Maximum Newton iterations (default: 25)
-    tol : float - Convergence tolerance (default: 1e-6)
+    - TrialStress: The trial stress tensor.
+    - PlasticStrain: The previous plastic strain tensor.
+    - Sy: The yield stress.
+    - MaxIter: Maximum Newton iterations.
+    - Tol: Convergence tolerance.
 
     Returns:
-    ufl.Expr - Corrected stress tensor after backprojection
+    - Corrected stress tensor.
+    - Updated plastic strain tensor.
     """
     
     # Initialize plastic multiplier Δγ as a scalar
@@ -127,18 +135,33 @@ def NewtonBackProjection(TrialStress, Sy, MaxIter=25, Tol=1e-6):
 
         dGamma = dGammaNew
 
-    # Return final corrected stress
+    # Return corrected stress and updated plastic strain
     return TrialStress - dGamma * (TrialStress / MaxStress)
+
+def ContractFourthOrderSecondOrder(E4, S):
+    """
+    Computes the contraction of a fourth-order tensor E4 with a second-order tensor S.
+    
+    Parameters:
+    -----------
+    E4 : ufl.Tensor (3×3×3×3)
+        Fourth-order compliance tensor.
+    S : ufl.Tensor (3×3)
+        Second-order stress tensor.
+    
+    Returns:
+    --------
+    ufl.Tensor (3×3)
+        Contracted strain tensor.
+    """
+    return ufl.as_tensor([
+        [sum(E4[i, j, k, l] * S[k, l] for k in range(3) for l in range(3)) for j in range(3)]
+        for i in range(3)
+    ])
 
 #%% Main
 
 def Main():
-
-    # Test definition
-    IniS = 0.0                                          # Initial state (-)
-    FinS = 0.2                                         # Final state/stretch (-)
-    NumberSteps = 25                                   # Number of steps (-)
-    DeltaStretch = round((FinS-IniS)/NumberSteps,3)    # Stretch step (-)
 
     # Generate mesh
     Mesh, CellTags, Classes = io.gmshio.read_from_msh('Cube.msh', comm=MPI.COMM_WORLD, rank=0, gdim=3)
@@ -152,6 +175,18 @@ def Main():
     Lambda = E * Nu / ((1 + Nu) * (1 - 2 * Nu))
     Sigma_y = 250.0  # Yield stress (MPa)
 
+    S4 = Tensor.Isotropic(E, Nu)
+    S66 = Tensor.IsoMorphism3333_66(S4)
+    E66 = np.linalg.inv(S66)
+    E66 = 1/2 * (E66 + E66.T)
+    E4 = Tensor.IsoMorphism66_3333(E66)
+
+    # Test definition
+    Tensile = np.linspace(0.0, 0.2, 10)
+    Compression = np.linspace(0.2, -Sigma_y/E, 10)
+    Closing = np.linspace(-Sigma_y/E, 0.0, 5)
+    Stretches = np.hstack([Tensile, Compression[1:-1], Closing])
+
     # Functions space over the mesh domain
     ElementType = 'Lagrange'
     PolDegree = 1
@@ -159,6 +194,11 @@ def Main():
     V = fem.FunctionSpace(Mesh, Ve)
     u = fem.Function(V)
     v = ufl.TestFunction(V)
+
+    # Plastic strain storage
+    Pe = ufl.TensorElement('CG', Mesh.ufl_cell(), 1)
+    P = fem.FunctionSpace(Mesh, Pe)
+    Ep = fem.Function(P)
 
     # Kinematics
     d = len(u)                         # Spatial dimension
@@ -178,7 +218,7 @@ def Main():
         """
 
         return 0.5*(ufl.nabla_grad(u) + ufl.nabla_grad(u).T)
-    def Sigma(u):
+    def Sigma(E):
 
         """
         Computes the stress tensor for a given displacement field.
@@ -189,10 +229,17 @@ def Main():
         Returns:
         ufl.Expr: The stress tensor.
         """
-        
-        return Lambda * ufl.nabla_div(u) * I + 2 * Mu * Epsilon(u)
-    Psi = ufl.inner(Sigma(u), Epsilon(v)) * ufl.dx
 
+        # Voigt notation
+        E = ufl.as_vector([E[0,0], E[1,1], E[2,2], 2*E[1,2], 2*E[0,2], 2*E[0,1]])
+        S = ufl.as_vector([sum(S66[i, j] * E[j] for j in range(6)) for i in range(6)])
+
+        # Convert Voigt notation back to tensor form
+        S = ufl.as_tensor([[S[0], S[5], S[4]],
+                        [S[5], S[1], S[3]],
+                        [S[4], S[3], S[2]]])
+        return S
+    
     # Boundary vertices
     Vertices = BoundaryVertices(Mesh)
     Bottom, Top, North, South, East, West = Vertices
@@ -224,26 +271,39 @@ def Main():
 
     # Variational formulation
     Data = pd.DataFrame()
-    for t in range(NumberSteps+1):
+    for t, Stretch in enumerate(Stretches):
 
         # Update displacement
-        Displacement = t * DeltaStretch * Height
+        Displacement = Stretch * Height
         u1.value = Displacement
+
+        # Weak form
+        EpsTrial = Epsilon(u)  # Compute strain
+        TrialStress = Sigma(EpsTrial - Ep)  # Use elastic strain only
+        Psi = ufl.inner(TrialStress, Epsilon(v)) * ufl.dx
         
         # Solve for displacement
         Problem = NonlinearProblem(Psi, u, BCs)
         Solver = NewtonSolver(MPI.COMM_WORLD, Problem)
         Solver.solve(u)
-        
-        # Check yielding and apply correction if needed
-        TrialStress = Sigma(u)
+
+        # Check yielding
         Yield = YieldFunction(TrialStress, Sigma_y)
         Y_Trial = fem.assemble_scalar(fem.form(Yield * ufl.dx))
-        
         if Y_Trial > 0:
+            
+            # Back-project stress onto yield surface
             CorrectedStress = NewtonBackProjection(TrialStress, Sigma_y)
         else:
-            CorrectedStress = TrialStress 
+            CorrectedStress = TrialStress
+
+        # Plastic strain
+        dEp = ContractFourthOrderSecondOrder(E4, TrialStress - CorrectedStress)
+        Expression = fem.Expression(dEp, P.element.interpolation_points())
+        dEp = fem.Function(P)
+        dEp.interpolate(Expression)
+        Ep.x.array[:] += dEp.x.array[:]
+
 
         # Compute stress
         Te = ufl.TensorElement('CG', Mesh.ufl_cell(), 1)
@@ -259,14 +319,21 @@ def Main():
 
         Data.loc[t,'Displacement'] = Displacement
         Data.loc[t,'Simulation'] = Force
+        Data.loc[t,'Plastic Strain'] = fem.assemble_scalar(fem.form(Ep[2, 2] * ufl.dx))
+
 
     # Plot results
-    Figure, Axis = plt.subplots(1,1)
-    Axis.plot([IniS, FinS], [Sigma_y/Area, Sigma_y/Area], color=(0,0,0), linestyle='--', label='Yield limit')
-    Axis.plot(Data['Displacement'], Data['Simulation'], color=(1,0,0), marker='o', label='Simulation')
-    Axis.set_xlabel('Displacement')
-    Axis.set_ylabel('Force')
-    plt.legend()
+    Figure, Axis = plt.subplots(1,2, figsize=(10,5), dpi=200)
+    Axis[0].plot([min(Stretches), max(Stretches)], [Sigma_y/Area, Sigma_y/Area], color=(0,0,0), linestyle='--')
+    Axis[0].plot([min(Stretches), max(Stretches)], [-Sigma_y/Area, -Sigma_y/Area], color=(0,0,0), linestyle='--', label='Yield limit')
+    Axis[0].plot(Data['Displacement'], Data['Simulation'], color=(1,0,0), marker='o')
+    Axis[0].set_xlabel('Displacement')
+    Axis[0].set_ylabel('Force')
+    Axis[0].legend()
+    Axis[1].plot(Data['Displacement'], Data['Plastic Strain'], color=(0,0,1), marker='o')
+    Axis[1].set_xlabel('Displacement')
+    Axis[1].set_ylabel('Plastic Strain')
+    plt.tight_layout()
     plt.show(Figure)
 
     return
