@@ -10,11 +10,11 @@ The repository is organized into the following directories:
 This directory contains simulations of different material models applied to a unit cube. The implemented and planned models include:
 
 - **Linear elasticity (Implemented)**: Basic linear elastic material analysis.
-- **Hyperelasticity (Ongoing)**: Advanced non-linear material behavior.
-- **Post-yield behaviors (Planned):**
+- **Hyperelasticity (Implemented)**: Advanced non-linear material behavior.
+- **Post-yield behaviors (Ongoing):**
   - Perfect plasticity
   - Densification
-- **Anisotropic material models (Planned)**: Implementation of anisotropic material properties.
+- **Anisotropic material models (Implemented)**: Implementation of anisotropic material properties.
 
 ### 2. TensileExperiment
 This directory provides a pipeline from a 3D scan to a full finite element simulation of a tensile experiment. The pipeline includes:
