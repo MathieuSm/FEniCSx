@@ -19,6 +19,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 from scipy.stats.distributions import t
 
 sys.path.append(str(Path(__file__).parents[1]))
@@ -131,6 +132,8 @@ def OLS(X, Y, Alpha=0.95, FName=''):
 
     return Parameters, R2adj, NE
 
+def Fit(X, a):
+    return 1/X**a + 1
 
 #%% Main
 
@@ -139,14 +142,16 @@ def Main():
     # Define paths
     AbaqusPath = Path(__file__).parent / 'Abaqus'
     FEniCSPath = Path(__file__).parent / 'FEniCS'
+    FabricPath = Path(__file__).parent / 'Fabric'
 
     # Read files
-    Files = [F.stem for F in FEniCSPath.iterdir()]
+    Files = sorted([F.stem for F in FEniCSPath.iterdir()])
 
     # Homogenization strains
     Strain = np.array([0.001, 0.001, 0.001, 0.002, 0.002, 0.002])
 
-    FEniCS, Abaqus = [], [],
+    FEniCS, Abaqus = [], []
+    BVTV = []
     for F in Files:
 
         # FEniCS stiffness
@@ -166,6 +171,9 @@ def Main():
             for j in range(6):
                 A_Stiffness[i,j] = Stress[i,j] / Strain[i]
         Abaqus.append(1/2 * (A_Stiffness + A_Stiffness.T))
+
+        # Read fabric to get BV/TV
+        BVTV.append(Read.Fabric(FabricPath / (F + '.fab'))[-1])
 
     # Build linear system
     X = np.matrix(np.ones((len(FEniCS)*9, 1)))
@@ -196,7 +204,24 @@ def Main():
     FName = Path(__file__).parent / 'Regression.png'
     Parameters, R2adj, NE = OLS(X, Y, FName=str(FName))
 
-
+    # Show anisotropy
+    Par, Cov = curve_fit(Fit, BVTV, [F[2,2] / F[0,0] for F in FEniCS])
+    X = np.linspace(min(BVTV),max(BVTV))
+    Figure, Axis = plt.subplots(1,1)
+    for B, F in zip(BVTV, FEniCS):
+        if B < 0.5:
+            C = (0,0,1)
+        else:
+            C = (1,0,0)
+        Axis.plot(B, F[2,2]/F[0,0], color=C, marker='o',
+                  fillstyle='none', linestyle='none')
+    Axis.plot([], color=(1,0,0), marker='o', fillstyle='none', linestyle='none', label='Cortical Bone')
+    Axis.plot([], color=(0,0,1), marker='o', fillstyle='none', linestyle='none', label='Trabecular Bone')
+    Axis.plot(X, Fit(X, Par[0]), linestyle='--', color=(0,0,0))
+    plt.xlabel('BV/TV (-)')
+    plt.ylabel('$E_{33}$ / $E_{11}$ (-)')
+    plt.legend()
+    plt.show(Figure)
 
     return
 

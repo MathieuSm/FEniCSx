@@ -244,6 +244,16 @@ def Main():
     Mu31 = 6417.14
     Mu12 = 4642.74
 
+    E1   = 1e4
+    E2   = 1e4
+    E3   = 1e4
+    Nu23 = 0.3
+    Nu13 = 0.3
+    Nu12 = 0.3
+    Mu23 = E1 / (2*(1+Nu23))
+    Mu31 = E2 / (2*(1+(Nu13/E1*E3)))
+    Mu12 = E3 / (2*(1+Nu12))
+
     # Build compliance and stiffness matrices
     E = np.array([[1/E1, -Nu12/E1, -Nu13/E1, 0, 0, 0],
                 [-Nu12/E1, 1/E2, -Nu23/E2, 0, 0, 0],
