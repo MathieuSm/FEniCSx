@@ -229,6 +229,7 @@ def Main():
     # Define paths
     MeshPath = Path(__file__).parent / 'Meshes'
     OutputPath = Path(__file__).parent / 'FEniCS'
+    OutputPath = Path(__file__).parent / 'Isotropic'
 
     # List meshes
     Meshes = sorted([F for F in MeshPath.iterdir() if F.name.endswith('.msh')])
