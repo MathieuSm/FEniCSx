@@ -135,6 +135,10 @@ def OLS(X, Y, Alpha=0.95, FName=''):
 def Fit(X, a):
     return 1/X**a + 1
 
+def iFit(X, a):
+    return 1/X**a
+
+
 #%% Main
 
 def Main():
@@ -143,6 +147,7 @@ def Main():
     AbaqusPath = Path(__file__).parent / 'Abaqus'
     FEniCSPath = Path(__file__).parent / 'FEniCS'
     FabricPath = Path(__file__).parent / 'Fabric'
+    IsoPath = Path(__file__).parent / 'Isotropic'
 
     # Read files
     Files = sorted([F.stem for F in FEniCSPath.iterdir()])
@@ -152,6 +157,7 @@ def Main():
 
     FEniCS, Abaqus = [], []
     BVTV = []
+    Iso = []
     for F in Files:
 
         # FEniCS stiffness
@@ -174,6 +180,10 @@ def Main():
 
         # Read fabric to get BV/TV
         BVTV.append(Read.Fabric(FabricPath / (F + '.fab'))[-1])
+
+        # FEniCS isotropic material stiffness
+        Data = np.load(IsoPath / (F + '.npy'))
+        Iso.append(1/2 * (Data + Data.T))
 
     # Build linear system
     X = np.matrix(np.ones((len(FEniCS)*9, 1)))
@@ -206,18 +216,23 @@ def Main():
 
     # Show anisotropy
     Par, Cov = curve_fit(Fit, BVTV, [F[2,2] / F[0,0] for F in FEniCS])
+    iPar, Cov = curve_fit(iFit, BVTV, [I[2,2] / I[0,0] for I in Iso])
     X = np.linspace(min(BVTV),max(BVTV))
     Figure, Axis = plt.subplots(1,1)
-    for B, F in zip(BVTV, FEniCS):
+    for B, F, I in zip(BVTV, FEniCS, Iso):
         if B < 0.5:
             C = (0,0,1)
         else:
             C = (1,0,0)
         Axis.plot(B, F[2,2]/F[0,0], color=C, marker='o',
                   fillstyle='none', linestyle='none')
-    Axis.plot([], color=(1,0,0), marker='o', fillstyle='none', linestyle='none', label='Cortical Bone')
-    Axis.plot([], color=(0,0,1), marker='o', fillstyle='none', linestyle='none', label='Trabecular Bone')
-    Axis.plot(X, Fit(X, Par[0]), linestyle='--', color=(0,0,0))
+        Axis.plot(B, I[2,2]/F[0,0], color=C, marker='o', linestyle='none')
+    Axis.plot([], color=(1,0,0), label='Cortical Bone')
+    Axis.plot([], color=(0,0,1), label='Trabecular Bone')
+    Axis.plot([], color=(0,0,0), marker='o', linestyle='none', label='Isotropic Material')
+    Axis.plot([], color=(0,0,0), marker='o', fillstyle='none', linestyle='none', label='transverse Isotropic Material')
+    # Axis.plot(X, Fit(X, Par[0]), linestyle='--', color=(0,0,0))
+    # Axis.plot(X, iFit(X, iPar[0]), linestyle='--', color=(0.5,0.5,0.5))
     plt.xlabel('BV/TV (-)')
     plt.ylabel('$E_{33}$ / $E_{11}$ (-)')
     plt.legend()
